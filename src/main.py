@@ -45,6 +45,14 @@ class WorkStationApp(Gtk.Application):
             box-shadow: none;
             outline: none;
         }
+        /* Estilos para los íconos de navegación */
+        .clickable {
+            opacity: 0.7;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .clickable:hover {
+            opacity: 1;
+        }
         """
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(css.encode())
@@ -305,15 +313,20 @@ class WorkStationApp(Gtk.Application):
         project_id = self.current_project['id'] if self.current_project else None
         for task in self.data_manager.get_tasks(project_id):
             row = Gtk.ListBoxRow()
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             box.set_margin_start(12)
             box.set_margin_end(12)
             row.get_style_context().add_class('task-row')
             row.add(box)
             
+            # Contenedor para el contenido de la tarea
+            content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            content_box.set_hexpand(True)
+            box.pack_start(content_box, True, True, 0)
+            
             title_label = Gtk.Label(label=task['title'])
             title_label.set_xalign(0)
-            box.pack_start(title_label, False, False, 0)
+            content_box.pack_start(title_label, False, False, 0)
             
             if task['description']:
                 # Limitar la descripción a 100 caracteres
@@ -326,7 +339,7 @@ class WorkStationApp(Gtk.Application):
                 desc_label.get_style_context().add_class('task-description')
                 desc_label.set_line_wrap(True)
                 desc_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-                box.pack_start(desc_label, False, False, 0)
+                content_box.pack_start(desc_label, False, False, 0)
             
             row.task_id = task['id']
             
@@ -334,7 +347,68 @@ class WorkStationApp(Gtk.Application):
             status = task.get('status', 'Por Hacer')
             if status not in self.task_lists:
                 status = 'Por Hacer'
+            
+            # Agregar íconos según la columna
+            if status == 'Por Hacer':
+                # Ícono para mover a la derecha
+                right_arrow = Gtk.Image.new_from_icon_name('go-next-symbolic', Gtk.IconSize.BUTTON)
+                right_arrow.set_margin_start(6)
+                right_arrow.set_margin_end(6)
+                right_arrow.set_valign(Gtk.Align.CENTER)
+                right_arrow.set_halign(Gtk.Align.END)
+                right_arrow.get_style_context().add_class('clickable')
+                right_arrow.connect('button-press-event', self.on_move_task_right, task['id'])
                 
+                # Crear un contenedor para el ícono que capture los eventos
+                right_arrow_box = Gtk.EventBox()
+                right_arrow_box.add(right_arrow)
+                right_arrow_box.connect('button-press-event', self.on_move_task_right, task['id'])
+                box.pack_start(right_arrow_box, False, False, 0)
+                
+            elif status == 'En Progreso':
+                # Ícono para mover a la izquierda
+                left_arrow = Gtk.Image.new_from_icon_name('go-previous-symbolic', Gtk.IconSize.BUTTON)
+                left_arrow.set_margin_start(6)
+                left_arrow.set_margin_end(6)
+                left_arrow.set_valign(Gtk.Align.CENTER)
+                left_arrow.set_halign(Gtk.Align.START)
+                left_arrow.get_style_context().add_class('clickable')
+                
+                # Crear un contenedor para el ícono que capture los eventos
+                left_arrow_box = Gtk.EventBox()
+                left_arrow_box.add(left_arrow)
+                left_arrow_box.connect('button-press-event', self.on_move_task_left, task['id'])
+                box.pack_start(left_arrow_box, False, False, 0)
+                
+                # Ícono para mover a la derecha
+                right_arrow = Gtk.Image.new_from_icon_name('go-next-symbolic', Gtk.IconSize.BUTTON)
+                right_arrow.set_margin_start(6)
+                right_arrow.set_margin_end(6)
+                right_arrow.set_valign(Gtk.Align.CENTER)
+                right_arrow.set_halign(Gtk.Align.END)
+                right_arrow.get_style_context().add_class('clickable')
+                
+                # Crear un contenedor para el ícono que capture los eventos
+                right_arrow_box = Gtk.EventBox()
+                right_arrow_box.add(right_arrow)
+                right_arrow_box.connect('button-press-event', self.on_move_task_right, task['id'])
+                box.pack_start(right_arrow_box, False, False, 0)
+                
+            elif status == 'Completado':
+                # Ícono para mover a la izquierda
+                left_arrow = Gtk.Image.new_from_icon_name('go-previous-symbolic', Gtk.IconSize.BUTTON)
+                left_arrow.set_margin_start(6)
+                left_arrow.set_margin_end(6)
+                left_arrow.set_valign(Gtk.Align.CENTER)
+                left_arrow.set_halign(Gtk.Align.END)
+                left_arrow.get_style_context().add_class('clickable')
+                
+                # Crear un contenedor para el ícono que capture los eventos
+                left_arrow_box = Gtk.EventBox()
+                left_arrow_box.add(left_arrow)
+                left_arrow_box.connect('button-press-event', self.on_move_task_left, task['id'])
+                box.pack_start(left_arrow_box, False, False, 0)
+            
             self.task_lists[status].add(row)
         
         # Mostrar todas las listas
@@ -348,6 +422,36 @@ class WorkStationApp(Gtk.Application):
                 task_list.select_row(first_row)
                 first_row.get_style_context().add_class('selected')
                 break
+
+    def on_move_task_left(self, widget, event, task_id):
+        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+        if task:
+            current_status = task.get('status', 'Por Hacer')
+            if current_status == 'En Progreso':
+                new_status = 'Por Hacer'
+            elif current_status == 'Completado':
+                new_status = 'En Progreso'
+            else:
+                return
+            
+            self.data_manager.update_task_status(task_id, new_status)
+            self.refresh_tasks()
+        return True
+
+    def on_move_task_right(self, widget, event, task_id):
+        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+        if task:
+            current_status = task.get('status', 'Por Hacer')
+            if current_status == 'Por Hacer':
+                new_status = 'En Progreso'
+            elif current_status == 'En Progreso':
+                new_status = 'Completado'
+            else:
+                return
+            
+            self.data_manager.update_task_status(task_id, new_status)
+            self.refresh_tasks()
+        return True
 
     def on_project_selected(self, listbox, row):
         if row:
