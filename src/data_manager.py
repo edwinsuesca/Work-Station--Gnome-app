@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import sqlite3
 
 class DataManager:
     def __init__(self):
@@ -124,4 +125,14 @@ class DataManager:
     def delete_task(self, task_id):
         """Elimina una tarea"""
         self.data['tasks'] = [task for task in self.data['tasks'] if task['id'] != task_id]
-        self._save_data() 
+        self._save_data()
+
+    def update_task(self, task_id, title, description):
+        """Actualiza una tarea existente."""
+        for task in self.data['tasks']:
+            if task['id'] == task_id:
+                task['title'] = title
+                task['description'] = description
+                self._save_data()
+                return True
+        return False 
