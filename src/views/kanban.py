@@ -93,6 +93,28 @@ class Kanban(Gtk.Box):
                 # Crear el menú contextual
                 menu = Gtk.Menu()
                 
+                # Submenú para cambiar estado
+                status_menu = Gtk.Menu()
+                status_item = Gtk.MenuItem(label="Cambiar Estado")
+                status_item.set_submenu(status_menu)
+                
+                # Obtener el estado actual de la tarea
+                task_id = row.task_id
+                task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+                current_status = task.get('status', 'Por Hacer')
+                
+                # Añadir opciones de estado
+                for status in ["Por Hacer", "En Progreso", "Completado"]:
+                    if status != current_status:
+                        status_option = Gtk.MenuItem(label=status)
+                        status_option.connect('activate', self.on_change_status, task_id, status)
+                        status_menu.append(status_option)
+                
+                menu.append(status_item)
+                
+                # Separador
+                menu.append(Gtk.SeparatorMenuItem())
+                
                 # Opción de eliminar
                 delete_item = Gtk.MenuItem(label="Eliminar")
                 delete_item.connect('activate', self.on_delete_task, row)
@@ -103,6 +125,12 @@ class Kanban(Gtk.Box):
                 menu.popup(None, None, None, None, event.button, event.time)
                 return True
         return False
+    
+    def on_change_status(self, menu_item, task_id, new_status):
+        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+        if task:
+            self.data_manager.update_task_status(task_id, new_status)
+            self.refresh_tasks(task['project_id'])
     
     def on_delete_task(self, menu_item, row):
         # Obtener la tarea seleccionada
@@ -186,66 +214,6 @@ class Kanban(Gtk.Box):
             if status not in self.task_lists:
                 status = 'Por Hacer'
             
-            # Agregar íconos según la columna
-            if status == 'Por Hacer':
-                # Ícono para mover a la derecha
-                right_arrow = Gtk.Image.new_from_icon_name('go-next-symbolic', Gtk.IconSize.BUTTON)
-                right_arrow.set_margin_start(6)
-                right_arrow.set_margin_end(6)
-                right_arrow.set_valign(Gtk.Align.CENTER)
-                right_arrow.set_halign(Gtk.Align.END)
-                right_arrow.get_style_context().add_class('clickable')
-                
-                # Crear un contenedor para el ícono que capture los eventos
-                right_arrow_box = Gtk.EventBox()
-                right_arrow_box.add(right_arrow)
-                right_arrow_box.connect('button-press-event', self.on_move_task_right, task['id'])
-                box.pack_start(right_arrow_box, False, False, 0)
-                
-            elif status == 'En Progreso':
-                # Ícono para mover a la izquierda
-                left_arrow = Gtk.Image.new_from_icon_name('go-previous-symbolic', Gtk.IconSize.BUTTON)
-                left_arrow.set_margin_start(6)
-                left_arrow.set_margin_end(6)
-                left_arrow.set_valign(Gtk.Align.CENTER)
-                left_arrow.set_halign(Gtk.Align.START)
-                left_arrow.get_style_context().add_class('clickable')
-                
-                # Crear un contenedor para el ícono que capture los eventos
-                left_arrow_box = Gtk.EventBox()
-                left_arrow_box.add(left_arrow)
-                left_arrow_box.connect('button-press-event', self.on_move_task_left, task['id'])
-                box.pack_start(left_arrow_box, False, False, 0)
-                
-                # Ícono para mover a la derecha
-                right_arrow = Gtk.Image.new_from_icon_name('go-next-symbolic', Gtk.IconSize.BUTTON)
-                right_arrow.set_margin_start(6)
-                right_arrow.set_margin_end(6)
-                right_arrow.set_valign(Gtk.Align.CENTER)
-                right_arrow.set_halign(Gtk.Align.END)
-                right_arrow.get_style_context().add_class('clickable')
-                
-                # Crear un contenedor para el ícono que capture los eventos
-                right_arrow_box = Gtk.EventBox()
-                right_arrow_box.add(right_arrow)
-                right_arrow_box.connect('button-press-event', self.on_move_task_right, task['id'])
-                box.pack_start(right_arrow_box, False, False, 0)
-                
-            elif status == 'Completado':
-                # Ícono para mover a la izquierda
-                left_arrow = Gtk.Image.new_from_icon_name('go-previous-symbolic', Gtk.IconSize.BUTTON)
-                left_arrow.set_margin_start(6)
-                left_arrow.set_margin_end(6)
-                left_arrow.set_valign(Gtk.Align.CENTER)
-                left_arrow.set_halign(Gtk.Align.END)
-                left_arrow.get_style_context().add_class('clickable')
-                
-                # Crear un contenedor para el ícono que capture los eventos
-                left_arrow_box = Gtk.EventBox()
-                left_arrow_box.add(left_arrow)
-                left_arrow_box.connect('button-press-event', self.on_move_task_left, task['id'])
-                box.pack_start(left_arrow_box, False, False, 0)
-            
             self.task_lists[status].add(row)
         
         # Mostrar todas las listas
@@ -258,34 +226,4 @@ class Kanban(Gtk.Box):
                 first_row = task_list.get_row_at_index(0)
                 task_list.select_row(first_row)
                 first_row.get_style_context().add_class('selected')
-                break
-    
-    def on_move_task_left(self, widget, event, task_id):
-        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
-        if task:
-            current_status = task.get('status', 'Por Hacer')
-            if current_status == 'En Progreso':
-                new_status = 'Por Hacer'
-            elif current_status == 'Completado':
-                new_status = 'En Progreso'
-            else:
-                return
-            
-            self.data_manager.update_task_status(task_id, new_status)
-            self.refresh_tasks(task['project_id'])
-        return True
-
-    def on_move_task_right(self, widget, event, task_id):
-        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
-        if task:
-            current_status = task.get('status', 'Por Hacer')
-            if current_status == 'Por Hacer':
-                new_status = 'En Progreso'
-            elif current_status == 'En Progreso':
-                new_status = 'Completado'
-            else:
-                return
-            
-            self.data_manager.update_task_status(task_id, new_status)
-            self.refresh_tasks(task['project_id'])
-        return True 
+                break 
