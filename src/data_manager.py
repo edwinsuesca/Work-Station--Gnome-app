@@ -135,4 +135,20 @@ class DataManager:
                 task['description'] = description
                 self._save_data()
                 return True
-        return False 
+        return False
+
+    def export_data(self):
+        """Exporta todos los datos de la aplicación."""
+        # Devolver una copia profunda de los datos
+        return json.loads(json.dumps(self.data))
+
+    def import_data(self, data):
+        """Importa todos los datos de la aplicación, sobrescribiendo los actuales."""
+        if not isinstance(data, dict):
+            raise ValueError("El formato de datos a importar no es válido.")
+        # Validar claves mínimas
+        for key in ['projects', 'notes', 'tasks']:
+            if key not in data:
+                raise ValueError(f"Falta la clave '{key}' en los datos a importar.")
+        self.data = data
+        self._save_data() 

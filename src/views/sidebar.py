@@ -1,6 +1,8 @@
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, GdkPixbuf
+import json
+import os
 
 class Sidebar(Gtk.Box):
     def __init__(self, data_manager, on_project_selected, on_add_project):
@@ -10,17 +12,20 @@ class Sidebar(Gtk.Box):
         self.on_project_selected = on_project_selected
         self.on_add_project = on_add_project
         
-        # Título de la sidebar
-        title_label = Gtk.Label(label="Proyectos")
-        title_label.set_margin_top(6)
-        title_label.set_margin_bottom(6)
-        title_label.set_margin_start(12)
-        title_label.set_margin_end(12)
+        # Sección del logo
+        logo_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        logo_box.set_margin_top(12)
+        logo_box.set_margin_bottom(12)
+        logo_box.set_margin_start(12)
+        logo_box.set_margin_end(12)
         
-        # Aplicar negrita al título usando CSS
-        title_label.get_style_context().add_class('bold-title')
+        # TODO: Agregar el logo de la aplicación aquí
+        # Por ahora solo un espacio reservado
+        logo_placeholder = Gtk.Label(label="LOGO")
+        logo_placeholder.get_style_context().add_class('bold-title')
+        logo_box.pack_start(logo_placeholder, False, False, 0)
         
-        self.pack_start(title_label, False, False, 0)
+        self.pack_start(logo_box, False, False, 0)
         
         # Separador
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
@@ -41,10 +46,118 @@ class Sidebar(Gtk.Box):
         add_project_btn.set_margin_bottom(6)
         self.pack_start(add_project_btn, False, False, 0)
         
+        # Separador
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        self.pack_start(separator, False, False, 0)
+        
+        # Sección de opciones
+        options_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        options_box.set_margin_start(6)
+        options_box.set_margin_end(6)
+        options_box.set_margin_bottom(6)
+        
+        # Botón de importar
+        import_btn = Gtk.Button(label="Importar")
+        import_btn.connect('clicked', self.on_import)
+        options_box.pack_start(import_btn, False, False, 0)
+        
+        # Botón de exportar
+        export_btn = Gtk.Button(label="Exportar")
+        export_btn.connect('clicked', self.on_export)
+        options_box.pack_start(export_btn, False, False, 0)
+        
+        self.pack_start(options_box, False, False, 0)
+        
         # Conectar el evento de clic derecho
         self.projects_list.connect('button-press-event', self.on_button_press)
         
         self.show_all()
+    
+    def on_import(self, widget):
+        # Crear el diálogo de selección de archivo
+        dialog = Gtk.FileChooserDialog(
+            title="Importar datos",
+            transient_for=self.get_toplevel(),
+            action=Gtk.FileChooserAction.OPEN
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OPEN, Gtk.ResponseType.OK
+        )
+        
+        # Filtrar por archivos JSON
+        filter_json = Gtk.FileFilter()
+        filter_json.set_name("Archivos JSON")
+        filter_json.add_mime_type("application/json")
+        dialog.add_filter(filter_json)
+        
+        # Ejecutar el diálogo
+        response = dialog.run()
+        
+        if response == Gtk.ResponseType.OK:
+            try:
+                with open(dialog.get_filename(), 'r') as f:
+                    data = json.load(f)
+                    self.data_manager.import_data(data)
+                    self.refresh_projects()
+            except Exception as e:
+                # Mostrar mensaje de error
+                error_dialog = Gtk.MessageDialog(
+                    transient_for=self.get_toplevel(),
+                    flags=0,
+                    message_type=Gtk.MessageType.ERROR,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Error al importar datos"
+                )
+                error_dialog.format_secondary_text(str(e))
+                error_dialog.run()
+                error_dialog.destroy()
+        
+        dialog.destroy()
+    
+    def on_export(self, widget):
+        # Crear el diálogo de selección de archivo
+        dialog = Gtk.FileChooserDialog(
+            title="Exportar datos",
+            transient_for=self.get_toplevel(),
+            action=Gtk.FileChooserAction.SAVE
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE, Gtk.ResponseType.OK
+        )
+        
+        # Filtrar por archivos JSON
+        filter_json = Gtk.FileFilter()
+        filter_json.set_name("Archivos JSON")
+        filter_json.add_mime_type("application/json")
+        dialog.add_filter(filter_json)
+        
+        # Establecer nombre de archivo por defecto
+        dialog.set_current_name("datos_exportados.json")
+        
+        # Ejecutar el diálogo
+        response = dialog.run()
+        
+        if response == Gtk.ResponseType.OK:
+            try:
+                data = self.data_manager.export_data()
+                with open(dialog.get_filename(), 'w') as f:
+                    json.dump(data, f, indent=4)
+            except Exception as e:
+                # Mostrar mensaje de error
+                error_dialog = Gtk.MessageDialog(
+                    transient_for=self.get_toplevel(),
+                    flags=0,
+                    message_type=Gtk.MessageType.ERROR,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Error al exportar datos"
+                )
+                error_dialog.format_secondary_text(str(e))
+                error_dialog.run()
+                error_dialog.destroy()
+        
+        dialog.destroy()
     
     def on_button_press(self, widget, event):
         if event.button == 3:  # Clic derecho
