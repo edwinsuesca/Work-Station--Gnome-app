@@ -22,7 +22,69 @@ class NotesView(Gtk.Box):
         add_note_btn.set_margin_bottom(6)
         self.pack_start(add_note_btn, False, False, 0)
         
+        # Conectar el evento de clic derecho
+        self.notes_list.connect('button-press-event', self.on_button_press)
+        
         self.show_all()
+    
+    def on_button_press(self, widget, event):
+        if event.button == 3:  # Clic derecho
+            # Obtener la fila bajo el cursor
+            row = self.notes_list.get_row_at_y(event.y)
+            if row:
+                # Seleccionar la fila
+                self.notes_list.select_row(row)
+                
+                # Remover la clase selected y deseleccionar todas las filas en todas las listas
+                for child in self.notes_list.get_children():
+                    child.get_style_context().remove_class('selected')
+                
+                # Aplicar la clase selected a la fila seleccionada
+                row.get_style_context().add_class('selected')
+                
+                # Crear el menú contextual
+                menu = Gtk.Menu()
+                
+                # Opción de eliminar
+                delete_item = Gtk.MenuItem(label="Eliminar")
+                delete_item.connect('activate', self.on_delete_note, row)
+                menu.append(delete_item)
+                
+                # Mostrar el menú
+                menu.show_all()
+                menu.popup(None, None, None, None, event.button, event.time)
+                return True
+        return False
+    
+    def on_delete_note(self, menu_item, row):
+        # Obtener la nota seleccionada
+        note_id = row.note_id
+        note = next((n for n in self.data_manager.get_notes() if n['id'] == note_id), None)
+        
+        if note:
+            # Crear diálogo de confirmación
+            dialog = Gtk.MessageDialog(
+                transient_for=self.get_toplevel(),
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK_CANCEL,
+                text=f"¿Estás seguro de eliminar la nota '{note['title']}'?"
+            )
+            dialog.format_secondary_text("Esta acción no se puede deshacer.")
+            
+            # Hacer que el botón OK sea el botón de acento
+            ok_button = dialog.get_widget_for_response(Gtk.ResponseType.OK)
+            ok_button.get_style_context().add_class('destructive-action')
+            
+            # Ejecutar el diálogo
+            response = dialog.run()
+            
+            if response == Gtk.ResponseType.OK:
+                # Eliminar la nota
+                self.data_manager.delete_note(note_id)
+                self.refresh_notes(note['project_id'])
+            
+            dialog.destroy()
     
     def refresh_notes(self, project_id):
         # Limpiar lista actual

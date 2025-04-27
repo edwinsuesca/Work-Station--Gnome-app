@@ -62,11 +62,49 @@ class Sidebar(Gtk.Box):
                 rename_item.connect('activate', self.on_rename_project, row)
                 menu.append(rename_item)
                 
+                # Separador
+                separator = Gtk.SeparatorMenuItem()
+                menu.append(separator)
+                
+                # Opción de eliminar
+                delete_item = Gtk.MenuItem(label="Eliminar")
+                delete_item.connect('activate', self.on_delete_project, row)
+                menu.append(delete_item)
+                
                 # Mostrar el menú
                 menu.show_all()
                 menu.popup(None, None, None, None, event.button, event.time)
                 return True
         return False
+    
+    def on_delete_project(self, menu_item, row):
+        # Obtener el proyecto seleccionado
+        project = self.data_manager.get_projects()[row.get_index()]
+        
+        # Crear diálogo de confirmación
+        dialog = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text=f"¿Estás seguro de eliminar el proyecto '{project['name']}'?"
+        )
+        dialog.format_secondary_text("Esta acción no se puede deshacer.")
+        
+        # Hacer que el botón OK sea el botón de acento
+        ok_button = dialog.get_widget_for_response(Gtk.ResponseType.OK)
+        ok_button.get_style_context().add_class('destructive-action')
+        
+        # Ejecutar el diálogo
+        response = dialog.run()
+        
+        if response == Gtk.ResponseType.OK:
+            # Eliminar el proyecto
+            self.data_manager.get_projects().pop(row.get_index())
+            self.data_manager._save_data()
+            self.refresh_projects()
+        
+        dialog.destroy()
     
     def on_rename_project(self, menu_item, row):
         # Obtener el proyecto seleccionado

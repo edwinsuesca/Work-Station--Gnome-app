@@ -176,7 +176,7 @@ class TaskDialog(Gtk.Dialog):
         
         # Establecer el foco en el campo de descripción
         self.desc_textview.grab_focus()
-
+    
     def get_task_data(self):
         title = self.title_entry.get_text()
         description = self.desc_textview.get_buffer().get_text(

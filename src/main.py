@@ -26,7 +26,7 @@ class WorkStationApp(Gtk.Application):
         # Crear la ventana principal
         self.win = Gtk.ApplicationWindow(application=app,
                                        title="Work Station")
-        self.win.set_default_size(1200, 768)
+        self.win.set_default_size(1400, 768)
         
         # Crear el layout principal con paned
         self.main_paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
@@ -52,6 +52,10 @@ class WorkStationApp(Gtk.Application):
         # Contenedor principal
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         
+        # Crear ScrolledWindow para permitir scroll en ambas direcciones
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        
         # Notebook para las diferentes secciones
         self.notebook = Gtk.Notebook()
         self.notebook.set_margin_start(6)
@@ -62,7 +66,15 @@ class WorkStationApp(Gtk.Application):
         self.setup_tasks_tab()
         self.setup_notes_tab()
         
-        self.main_box.pack_start(self.notebook, True, True, 0)
+        # Crear un contenedor intermedio para el notebook
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        container.pack_start(self.notebook, True, True, 0)
+        
+        # Agregar el contenedor al ScrolledWindow
+        scrolled_window.add(container)
+        
+        # Añadir el ScrolledWindow al main_box
+        self.main_box.pack_start(scrolled_window, True, True, 0)
         
         # Añadir el contenido principal al paned
         self.main_paned.pack2(self.main_box, True, True)

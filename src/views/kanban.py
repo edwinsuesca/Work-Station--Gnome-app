@@ -67,7 +67,72 @@ class Kanban(Gtk.Box):
                 separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
                 self.pack_start(separator, False, False, 0)
         
+        # Conectar el evento de clic derecho para todas las listas de tareas
+        for task_list in self.task_lists.values():
+            task_list.connect('button-press-event', self.on_button_press)
+        
         self.show_all()
+    
+    def on_button_press(self, widget, event):
+        if event.button == 3:  # Clic derecho
+            # Obtener la fila bajo el cursor
+            row = widget.get_row_at_y(event.y)
+            if row:
+                # No seleccionar la fila automáticamente
+                widget.select_row(row)
+
+                # Remover la clase selected y deseleccionar todas las filas en todas las listas
+                for task_list in self.task_lists.values():
+                    task_list.unselect_all()
+                    for child in task_list.get_children():
+                        child.get_style_context().remove_class('selected')
+                
+                # Aplicar la clase selected a la fila seleccionada
+                row.get_style_context().add_class('selected')
+                
+                # Crear el menú contextual
+                menu = Gtk.Menu()
+                
+                # Opción de eliminar
+                delete_item = Gtk.MenuItem(label="Eliminar")
+                delete_item.connect('activate', self.on_delete_task, row)
+                menu.append(delete_item)
+                
+                # Mostrar el menú
+                menu.show_all()
+                menu.popup(None, None, None, None, event.button, event.time)
+                return True
+        return False
+    
+    def on_delete_task(self, menu_item, row):
+        # Obtener la tarea seleccionada
+        task_id = row.task_id
+        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+        
+        if task:
+            # Crear diálogo de confirmación
+            dialog = Gtk.MessageDialog(
+                transient_for=self.get_toplevel(),
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK_CANCEL,
+                text=f"¿Estás seguro de eliminar la tarea '{task['title']}'?"
+            )
+            dialog.format_secondary_text("Esta acción no se puede deshacer.")
+            
+            # Hacer que el botón OK sea el botón de acento
+            ok_button = dialog.get_widget_for_response(Gtk.ResponseType.OK)
+            ok_button.get_style_context().add_class('destructive-action')
+            
+            # Ejecutar el diálogo
+            response = dialog.run()
+            
+            if response == Gtk.ResponseType.OK:
+                # Eliminar la tarea
+                self.data_manager.delete_task(task_id)
+                self.refresh_tasks(task['project_id'])
+            
+            dialog.destroy()
     
     def refresh_tasks(self, project_id):
         # Limpiar todas las listas
@@ -89,22 +154,30 @@ class Kanban(Gtk.Box):
             content_box.set_hexpand(True)
             box.pack_start(content_box, True, True, 0)
             
-            title_label = Gtk.Label(label=task['title'])
-            title_label.set_xalign(0)
-            content_box.pack_start(title_label, False, False, 0)
+            if task['title']:
+                # Limitar la descripción a 100 caracteres
+                title = task['title']
+                if len(title) > 80:
+                    title = title[:77] + "..."
+                
+                title_label = Gtk.Label(label=title)
+                title_label.set_xalign(0)
+                title_label.set_line_wrap(True)
+                title_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                content_box.pack_start(title_label, False, False, 0)
             
             if task['description']:
                 # Limitar la descripción a 100 caracteres
                 description = task['description']
-                if len(description) > 100:
-                    description = description[:97] + "..."
+                if len(description) > 80:
+                    description = description[:77] + "..."
                 
-                desc_label = Gtk.Label(label=description)
-                desc_label.set_xalign(0)
-                desc_label.get_style_context().add_class('task-description')
-                desc_label.set_line_wrap(True)
-                desc_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-                content_box.pack_start(desc_label, False, False, 0)
+                title_label = Gtk.Label(label=description)
+                title_label.set_xalign(0)
+                title_label.get_style_context().add_class('task-description')
+                title_label.set_line_wrap(True)
+                title_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                content_box.pack_start(title_label, False, False, 0)
             
             row.task_id = task['id']
             
