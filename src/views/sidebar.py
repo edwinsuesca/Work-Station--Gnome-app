@@ -20,16 +20,30 @@ class Sidebar(Gtk.Box):
         logo_box.set_margin_end(12)
         
         # TODO: Agregar el logo de la aplicación aquí
-        # Por ahora solo un espacio reservado
-        logo_placeholder = Gtk.Label(label="LOGO")
-        logo_placeholder.get_style_context().add_class('bold-title')
-        logo_box.pack_start(logo_placeholder, False, False, 0)
+        # Mostrar el logo real
+        logo_path = os.path.join(os.path.dirname(__file__), '../assets/logo.svg')
+        logo_img = Gtk.Image.new_from_file(logo_path)
+        logo_img.set_pixel_size(64)
+        #logo_box.set_size_request(70, 14)
+        logo_box.pack_start(logo_img, False, False, 0)
         
         self.pack_start(logo_box, False, False, 0)
         
         # Separador
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         self.pack_start(separator, False, False, 0)
+        
+        # Título de la sidebar
+        title_label = Gtk.Label(label="Proyectos")
+        title_label.set_margin_top(6)
+        title_label.set_margin_bottom(6)
+        title_label.set_margin_start(12)
+        title_label.set_margin_end(12)
+        
+        # Aplicar negrita al título usando CSS
+        title_label.get_style_context().add_class('bold-title')
+        
+        self.pack_start(title_label, False, False, 0)
         
         # Lista de proyectos
         self.projects_list = Gtk.ListBox()

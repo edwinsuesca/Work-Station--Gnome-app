@@ -97,7 +97,7 @@ class NotesView(Gtk.Box):
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             box.set_margin_start(12)
             box.set_margin_end(12)
-            row.get_style_context().add_class('task-row')
+            row.get_style_context().add_class('item')
             row.add(box)
             
             title_label = Gtk.Label(label=note['title'])

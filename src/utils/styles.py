@@ -5,12 +5,14 @@ from gi.repository import Gtk, Gdk
 
 def load_styles():
     css = """
-    .task-row {
+    .item {
         padding: 5px 0;
+        border: none;
         border-bottom: 1px solid rgba(141, 141, 141, 0.2);
     }
     .selected {
-        background-color: rgba(141, 141, 141, 0.2);
+        background-color: rgba(0, 142, 255, 0.2);
+        border-bottom-color: rgba(0, 142, 255, 0.7);
         color: @theme_fg_color;
     }
     .task-description {
@@ -45,8 +47,21 @@ def load_styles():
     entry placeholder {
         color: rgba(141, 141, 141, 0.6);
     }
+    
     textview {
         padding: 8px;
+    }
+
+    .p-8 {
+        padding: 8px;
+    }
+
+    .bold-title {
+        font-weight: bold;
+    }
+
+    button {
+        border: none;
     }
     """
     css_provider = Gtk.CssProvider()
