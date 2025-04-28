@@ -63,6 +63,14 @@ def load_styles():
     button {
         border: none;
     }
+
+    .kanban-column {
+        border-right: 1px solid rgba(141, 141, 141, 0.2);
+    }
+
+    .kanban-column:last-child {
+        border-right: none;
+    }
     """
     css_provider = Gtk.CssProvider()
     css_provider.load_from_data(css.encode())

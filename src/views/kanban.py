@@ -6,6 +6,7 @@ class Kanban(Gtk.Box):
     def __init__(self, data_manager, on_task_activated, on_add_task):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.data_manager = data_manager
+        self.set_homogeneous(True)
         self.on_task_activated = on_task_activated
         self.on_add_task = on_add_task
         
@@ -16,8 +17,10 @@ class Kanban(Gtk.Box):
         for i, column in enumerate(columns):
             # Contenedor de columna
             column_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-            column_box.set_size_request(300, -1)
+            column_box.set_hexpand(True)
+            #column_box.set_size_request(300, -1)
             column_box.column_status = column  # Agregar el estado como propiedad
+            column_box.get_style_context().add_class('kanban-column')
             
             # Header de la columna
             header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -61,15 +64,11 @@ class Kanban(Gtk.Box):
             column_box.pack_start(add_task_btn, False, False, 0)
             
             self.pack_start(column_box, True, True, 0)
-            
-            # Añadir separador entre columnas
-            if i < len(columns) - 1:
-                separator = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
-                self.pack_start(separator, False, False, 0)
         
         # Conectar el evento de clic derecho para todas las listas de tareas
         for task_list in self.task_lists.values():
             task_list.connect('button-press-event', self.on_button_press)
+        
         
         self.show_all()
     
