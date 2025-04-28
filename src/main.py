@@ -182,9 +182,9 @@ class WorkStationApp(Gtk.Application):
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            name, description = dialog.get_project_data()
+            name, color = dialog.get_project_data()
             if name:
-                self.data_manager.add_project(name, description)
+                self.data_manager.add_project(name, color)
                 self.sidebar.refresh_projects()
         
         dialog.destroy()

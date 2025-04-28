@@ -3,6 +3,7 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf
 import json
 import os
+from dialogs.dialogs import ProjectDialog
 
 class Sidebar(Gtk.Box):
     def __init__(self, data_manager, on_project_selected, on_add_project):
@@ -19,13 +20,27 @@ class Sidebar(Gtk.Box):
         logo_box.set_margin_start(12)
         logo_box.set_margin_end(12)
         
-        # TODO: Agregar el logo de la aplicación aquí
-        # Mostrar el logo real
-        logo_path = os.path.join(os.path.dirname(__file__), '../assets/logo.svg')
-        logo_img = Gtk.Image.new_from_file(logo_path)
-        logo_img.set_pixel_size(64)
-        #logo_box.set_size_request(70, 14)
-        logo_box.pack_start(logo_img, False, False, 0)
+        def get_logo_path():
+            # Ruta estándar de instalación global
+            system_path = "/usr/local/share/work-station/assets/logo.png"
+            # Ruta relativa para desarrollo
+            dev_path = os.path.join(os.path.dirname(__file__), '../assets/logo.png')
+            if os.path.exists(system_path):
+                return system_path
+            elif os.path.exists(dev_path):
+                return dev_path
+            else:
+                return None
+
+        logo_path = get_logo_path()
+        if logo_path:
+            logo_img = Gtk.Image.new_from_file(logo_path)
+            logo_box.set_size_request(140, 28)
+            logo_box.pack_start(logo_img, False, False, 0)
+        else:
+            logo_placeholder = Gtk.Label(label="LOGO")
+            logo_placeholder.get_style_context().add_class('bold-title')
+            logo_box.pack_start(logo_placeholder, False, False, 0)
         
         self.pack_start(logo_box, False, False, 0)
         
@@ -34,11 +49,11 @@ class Sidebar(Gtk.Box):
         self.pack_start(separator, False, False, 0)
         
         # Título de la sidebar
-        title_label = Gtk.Label(label="Proyectos")
-        title_label.set_margin_top(6)
-        title_label.set_margin_bottom(6)
-        title_label.set_margin_start(12)
-        title_label.set_margin_end(12)
+        title_label = Gtk.Label(label='Proyectos')
+        title_label.set_margin_top(3)
+        title_label.set_margin_bottom(3)
+        title_label.set_margin_start(6)
+        title_label.set_margin_end(6)
         
         # Aplicar negrita al título usando CSS
         title_label.get_style_context().add_class('bold-title')
@@ -48,8 +63,6 @@ class Sidebar(Gtk.Box):
         # Lista de proyectos
         self.projects_list = Gtk.ListBox()
         self.projects_list.connect('row-selected', self.on_project_selected)
-        self.projects_list.set_margin_start(6)
-        self.projects_list.set_margin_end(6)
         self.pack_start(self.projects_list, True, True, 0)
         
         # Botón para añadir proyecto
@@ -177,17 +190,26 @@ class Sidebar(Gtk.Box):
         if event.button == 3:  # Clic derecho
             # Obtener la fila bajo el cursor
             row = self.projects_list.get_row_at_y(event.y)
+            
+            # Crear el menú contextual
+            menu = Gtk.Menu()
+            
             if row:
+                # Si hay una fila bajo el cursor, mostrar opciones para el proyecto
                 # Seleccionar la fila
                 self.projects_list.select_row(row)
                 
-                # Crear el menú contextual
-                menu = Gtk.Menu()
+                # Remover la clase selected de todas las filas
+                for child in self.projects_list.get_children():
+                    child.get_style_context().remove_class('selected')
                 
-                # Opción de renombrar
-                rename_item = Gtk.MenuItem(label="Renombrar")
-                rename_item.connect('activate', self.on_rename_project, row)
-                menu.append(rename_item)
+                # Aplicar la clase selected a la fila seleccionada
+                row.get_style_context().add_class('selected')
+                
+                # Opción de Editar
+                edit_item = Gtk.MenuItem(label="Editar")
+                edit_item.connect('activate', self.on_rename_project, row)
+                menu.append(edit_item)
                 
                 # Separador
                 separator = Gtk.SeparatorMenuItem()
@@ -197,11 +219,16 @@ class Sidebar(Gtk.Box):
                 delete_item = Gtk.MenuItem(label="Eliminar")
                 delete_item.connect('activate', self.on_delete_project, row)
                 menu.append(delete_item)
-                
-                # Mostrar el menú
-                menu.show_all()
-                menu.popup(None, None, None, None, event.button, event.time)
-                return True
+            else:
+                # Si no hay fila bajo el cursor, mostrar opción de nuevo proyecto
+                new_project_item = Gtk.MenuItem(label="Nuevo Proyecto")
+                new_project_item.connect('activate', self.on_add_project)
+                menu.append(new_project_item)
+            
+            # Mostrar el menú
+            menu.show_all()
+            menu.popup(None, None, None, None, event.button, event.time)
+            return True
         return False
     
     def on_delete_project(self, menu_item, row):
@@ -216,7 +243,7 @@ class Sidebar(Gtk.Box):
             buttons=Gtk.ButtonsType.OK_CANCEL,
             text=f"¿Estás seguro de eliminar el proyecto '{project['name']}'?"
         )
-        dialog.format_secondary_text("Esta acción no se puede deshacer.")
+        dialog.format_secondary_text("Esta acción eliminará el proyecto y todas sus tareas y notas asociadas. No se puede deshacer.")
         
         # Hacer que el botón OK sea el botón de acento
         ok_button = dialog.get_widget_for_response(Gtk.ResponseType.OK)
@@ -226,64 +253,59 @@ class Sidebar(Gtk.Box):
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            # Eliminar el proyecto
-            self.data_manager.get_projects().pop(row.get_index())
-            self.data_manager._save_data()
+            # Guardar el índice actual
+            current_index = row.get_index()
+            
+            # Eliminar el proyecto y todos sus elementos asociados
+            self.data_manager.delete_project(project['id'])
+            
+            # Actualizar la lista de proyectos
             self.refresh_projects()
+            
+            # Obtener la lista actualizada de proyectos
+            projects = self.data_manager.get_projects()
+            
+            if projects:
+                # Si hay proyectos, seleccionar el siguiente o el anterior
+                if current_index < len(projects):
+                    next_row = self.projects_list.get_row_at_index(current_index)
+                else:
+                    next_row = self.projects_list.get_row_at_index(current_index - 1)
+                
+                if next_row:
+                    self.projects_list.select_row(next_row)
+                    self.on_project_selected(self.projects_list, next_row)
+            else:
+                # Si no hay proyectos, crear uno temporal
+                temp_project = self.data_manager.add_project("Proyecto Temporal")
+                self.refresh_projects()
+                
+                # Seleccionar el proyecto temporal
+                temp_row = self.projects_list.get_row_at_index(0)
+                if temp_row:
+                    self.projects_list.select_row(temp_row)
+                    self.on_project_selected(self.projects_list, temp_row)
+                
+                # Eliminar el proyecto temporal
+                self.data_manager.delete_project(temp_project['id'])
+                self.refresh_projects()
         
         dialog.destroy()
     
     def on_rename_project(self, menu_item, row):
         # Obtener el proyecto seleccionado
-        project = self.data_manager.get_projects()[row.get_index()]
+        project_id = self.data_manager.get_projects()[row.get_index()]['id']
+        project = self.data_manager.get_project(project_id)
         
         # Crear el diálogo de edición
-        dialog = Gtk.Dialog(title="Renombrar Proyecto", transient_for=self.get_toplevel(), flags=0)
-        dialog.add_buttons(
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-            Gtk.STOCK_OK, Gtk.ResponseType.OK
-        )
-        
-        # Hacer que el botón OK sea el botón de acento
-        ok_button = dialog.get_widget_for_response(Gtk.ResponseType.OK)
-        ok_button.get_style_context().add_class('suggested-action')
-        
-        # Establecer un tamaño mínimo para el diálogo
-        dialog.set_default_size(600, 100)
-        
-        # Contenedor principal
-        box = dialog.get_content_area()
-        box.set_margin_start(12)
-        box.set_margin_end(12)
-        box.set_margin_top(12)
-        box.set_margin_bottom(12)
-        
-        # Contenedor para el nombre
-        name_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.pack_start(name_box, True, True, 0)
-        
-        # Entrada de nombre
-        name_entry = Gtk.Entry()
-        name_entry.set_placeholder_text("Nombre del proyecto")
-        name_entry.set_text(project['name'])
-        name_entry.set_hexpand(True)
-        name_box.pack_start(name_entry, True, True, 0)
-        
-        # Mostrar el diálogo
-        dialog.show_all()
-        
-        # Establecer el foco en el campo de nombre
-        name_entry.grab_focus()
-        
-        # Ejecutar el diálogo
+        dialog = ProjectDialog(self.get_toplevel(), project)
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            new_name = name_entry.get_text()
-            if new_name:
+            name, color = dialog.get_project_data()
+            if name:
                 # Actualizar el proyecto
-                project['name'] = new_name
-                self.data_manager._save_data()
+                self.data_manager.update_project(project['id'], name, color)
                 self.refresh_projects()
         
         dialog.destroy()
@@ -300,16 +322,21 @@ class Sidebar(Gtk.Box):
             box.set_margin_start(12)
             box.set_margin_end(12)
             row.get_style_context().add_class('task-row')
+            row.get_style_context().add_class('item')
             row.add(box)
+            
+            # Aplicar el color del proyecto como borde izquierdo
+            color = project.get('color', 'rgb(245, 39, 39)')  # Color por defecto si no existe
+            provider = Gtk.CssProvider()
+            provider.load_from_data(f'.item {{ border-left: 7px solid {color}; }}'.encode())
+            row.get_style_context().add_provider(
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
             
             name_label = Gtk.Label(label=project['name'])
             name_label.set_xalign(0)
             box.pack_start(name_label, False, False, 0)
-            
-            if project['description']:
-                desc_label = Gtk.Label(label=project['description'])
-                desc_label.set_xalign(0)
-                box.pack_start(desc_label, False, False, 0)
             
             self.projects_list.add(row)
         

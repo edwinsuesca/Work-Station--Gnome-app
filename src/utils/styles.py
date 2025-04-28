@@ -10,6 +10,12 @@ def load_styles():
         border: none;
         border-bottom: 1px solid rgba(141, 141, 141, 0.2);
     }
+
+    .item-project {
+        padding: 10px 0;
+        border: none;
+        border-bottom: 1px solid rgba(141, 141, 141, 0.2);
+    }
     .selected {
         background-color: rgba(0, 142, 255, 0.2);
         border-bottom-color: rgba(0, 142, 255, 0.7);
@@ -70,6 +76,29 @@ def load_styles():
 
     .kanban-column:last-child {
         border-right: none;
+    }
+
+    /* Estilo para el área de botones en diálogos */
+    .dialog-action-area {
+        margin-top: 25px;
+    }
+
+    .dialog-action-area button:first-child {
+        margin-right: 10px;
+    }
+
+    /* Estilos para los botones de color */
+    .color-button {
+        border-radius: 20px;
+        min-width: 20px;
+        min-height: 20px;
+        padding: 0;
+        background: none;
+    }
+
+    .selected-color {
+        border: 2px solid @theme_fg_color;
+        border-width: 3px;
     }
     """
     css_provider = Gtk.CssProvider()

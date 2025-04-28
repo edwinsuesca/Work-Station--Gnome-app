@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from datetime import datetime
 
 class DataManager:
     def __init__(self):
@@ -25,24 +26,48 @@ class DataManager:
             try:
                 with open(self.data_file, 'r') as f:
                     self.data = json.load(f)
+                    # Asegurar que todos los proyectos tengan un color
+                    self._ensure_project_colors()
             except json.JSONDecodeError:
                 self._save_data()  # Si el archivo está corrupto, lo reescribimos
+
+    def _ensure_project_colors(self):
+        """Asegura que todos los proyectos tengan un color asignado"""
+        from dialogs.dialogs import PROJECT_COLORS
+        for project in self.data['projects']:
+            if 'color' not in project:
+                # Asignar un color basado en el índice del proyecto
+                color_index = len(self.data['projects']) % len(PROJECT_COLORS)
+                project['color'] = PROJECT_COLORS[color_index]
+        self._save_data()
 
     def _save_data(self):
         """Guarda los datos en el archivo JSON"""
         with open(self.data_file, 'w') as f:
             json.dump(self.data, f, indent=4)
 
-    def add_project(self, name, description=""):
+    def add_project(self, name, color=None):
         """Añade un nuevo proyecto"""
         project = {
             'id': len(self.data['projects']) + 1,
             'name': name,
-            'description': description
+            'color': color or 'rgb(245, 39, 39)'  # Color por defecto
         }
         self.data['projects'].append(project)
         self._save_data()
         return project
+
+    def update_project(self, project_id, name=None, color=None):
+        """Actualiza un proyecto existente"""
+        for project in self.data['projects']:
+            if project['id'] == project_id:
+                if name is not None:
+                    project['name'] = name
+                if color is not None:
+                    project['color'] = color
+                self._save_data()
+                return project
+        return None
 
     def add_note(self, title, content, project_id):
         """Añade una nueva nota"""
@@ -53,7 +78,9 @@ class DataManager:
             'id': len(self.data['notes']) + 1,
             'title': title,
             'content': content,
-            'project_id': project_id
+            'project_id': project_id,
+            'created_at': datetime.now().strftime('%d/%m/%Y'),
+            'updated_at': None
         }
         self.data['notes'].append(note)
         self._save_data()
@@ -65,6 +92,7 @@ class DataManager:
             if note['id'] == note_id:
                 note['title'] = title
                 note['content'] = content
+                note['updated_at'] = datetime.now().strftime('%d/%m/%Y')
                 self._save_data()
                 return note
         return None
@@ -79,7 +107,9 @@ class DataManager:
             'title': title,
             'description': description,
             'status': status,
-            'project_id': project_id
+            'project_id': project_id,
+            'created_at': datetime.now().strftime('%d/%m/%Y'),
+            'updated_at': None
         }
         self.data['tasks'].append(task)
         self._save_data()
@@ -133,6 +163,7 @@ class DataManager:
             if task['id'] == task_id:
                 task['title'] = title
                 task['description'] = description
+                task['updated_at'] = datetime.now().strftime('%d/%m/%Y')
                 self._save_data()
                 return True
         return False
@@ -151,4 +182,17 @@ class DataManager:
             if key not in data:
                 raise ValueError(f"Falta la clave '{key}' en los datos a importar.")
         self.data = data
+        self._save_data()
+
+    def delete_project(self, project_id):
+        """Elimina un proyecto y todos sus elementos asociados (tareas y notas)"""
+        # Eliminar el proyecto
+        self.data['projects'] = [p for p in self.data['projects'] if p['id'] != project_id]
+        
+        # Eliminar todas las notas asociadas al proyecto
+        self.data['notes'] = [n for n in self.data['notes'] if n['project_id'] != project_id]
+        
+        # Eliminar todas las tareas asociadas al proyecto
+        self.data['tasks'] = [t for t in self.data['tasks'] if t['project_id'] != project_id]
+        
         self._save_data() 

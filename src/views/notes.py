@@ -30,30 +30,29 @@ class NotesView(Gtk.Box):
     def on_button_press(self, widget, event):
         if event.button == 3:  # Clic derecho
             # Obtener la fila bajo el cursor
-            row = self.notes_list.get_row_at_y(event.y)
+            row = widget.get_row_at_y(event.y)
+            
+            # Crear el menú contextual
+            menu = Gtk.Menu()
+            
             if row:
                 # Seleccionar la fila
-                self.notes_list.select_row(row)
-                
-                # Remover la clase selected y deseleccionar todas las filas en todas las listas
-                for child in self.notes_list.get_children():
-                    child.get_style_context().remove_class('selected')
-                
-                # Aplicar la clase selected a la fila seleccionada
-                row.get_style_context().add_class('selected')
-                
-                # Crear el menú contextual
-                menu = Gtk.Menu()
+                widget.select_row(row)
                 
                 # Opción de eliminar
                 delete_item = Gtk.MenuItem(label="Eliminar")
                 delete_item.connect('activate', self.on_delete_note, row)
                 menu.append(delete_item)
-                
-                # Mostrar el menú
-                menu.show_all()
-                menu.popup(None, None, None, None, event.button, event.time)
-                return True
+            else:
+                # Opción de crear nota
+                new_note_item = Gtk.MenuItem(label="Crear Nota")
+                new_note_item.connect('activate', self.on_add_note)
+                menu.append(new_note_item)
+            
+            # Mostrar el menú
+            menu.show_all()
+            menu.popup(None, None, None, None, event.button, event.time)
+            return True
         return False
     
     def on_delete_note(self, menu_item, row):
@@ -91,6 +90,10 @@ class NotesView(Gtk.Box):
         for child in self.notes_list.get_children():
             self.notes_list.remove(child)
         
+        # Obtener el color del proyecto
+        project = self.data_manager.get_project(project_id)
+        project_color = project.get('color', 'rgb(245, 39, 39)')
+        
         # Añadir notas
         for note in self.data_manager.get_notes(project_id):
             row = Gtk.ListBoxRow()
@@ -100,6 +103,14 @@ class NotesView(Gtk.Box):
             row.get_style_context().add_class('item')
             row.add(box)
             
+            # Aplicar el color del proyecto como borde izquierdo
+            provider = Gtk.CssProvider()
+            provider.load_from_data(f'.item {{ border-left: 7px solid {project_color}; }}'.encode())
+            row.get_style_context().add_provider(
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+            
             title_label = Gtk.Label(label=note['title'])
             title_label.set_xalign(0)
             box.pack_start(title_label, False, False, 0)
@@ -108,6 +119,26 @@ class NotesView(Gtk.Box):
                 content_label = Gtk.Label(label=note['content'])
                 content_label.set_xalign(0)
                 box.pack_start(content_label, False, False, 0)
+            
+            # Contenedor para las fechas
+            dates_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            dates_box.set_margin_top(6)
+            box.pack_start(dates_box, False, False, 0)
+            
+            # Fecha de creación
+            created_at = note.get('created_at', 'No disponible')
+            created_label = Gtk.Label(label=f"Creada: {created_at}")
+            created_label.set_xalign(0)
+            created_label.get_style_context().add_class('task-description')
+            dates_box.pack_start(created_label, False, False, 0)
+            
+            # Fecha de actualización si existe
+            updated_at = note.get('updated_at')
+            if updated_at:
+                updated_label = Gtk.Label(label=f"Actualizada: {updated_at}")
+                updated_label.set_xalign(0)
+                updated_label.get_style_context().add_class('task-description')
+                dates_box.pack_start(updated_label, False, False, 0)
             
             row.note_id = note['id']
             self.notes_list.add(row)

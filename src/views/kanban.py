@@ -100,19 +100,21 @@ class Kanban(Gtk.Box):
                 # Obtener el estado actual de la tarea
                 task_id = row.task_id
                 task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
-                current_status = task.get('status', 'Por Hacer')
                 
-                # Añadir opciones de estado
-                for status in ["Por Hacer", "En Progreso", "Completado"]:
-                    if status != current_status:
-                        status_option = Gtk.MenuItem(label=status)
-                        status_option.connect('activate', self.on_change_status, task_id, status)
-                        status_menu.append(status_option)
-                
-                menu.append(status_item)
-                
-                # Separador
-                menu.append(Gtk.SeparatorMenuItem())
+                if task:  # Solo si la tarea existe
+                    current_status = task.get('status', 'Por Hacer')
+                    
+                    # Añadir opciones de estado
+                    for status in ["Por Hacer", "En Progreso", "Completado"]:
+                        if status != current_status:
+                            status_option = Gtk.MenuItem(label=status)
+                            status_option.connect('activate', self.on_change_status, task_id, status)
+                            status_menu.append(status_option)
+                    
+                    menu.append(status_item)
+                    
+                    # Separador
+                    menu.append(Gtk.SeparatorMenuItem())
                 
                 # Opción de eliminar
                 delete_item = Gtk.MenuItem(label="Eliminar")
@@ -129,7 +131,7 @@ class Kanban(Gtk.Box):
         task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
         if task:
             self.data_manager.update_task_status(task_id, new_status)
-            self.refresh_tasks(task['project_id'])
+            self.refresh_tasks(task['project_id'], selected_task_id=task_id)
     
     def on_delete_task(self, menu_item, row):
         # Obtener la tarea seleccionada
@@ -161,20 +163,32 @@ class Kanban(Gtk.Box):
             
             dialog.destroy()
     
-    def refresh_tasks(self, project_id):
+    def refresh_tasks(self, project_id, selected_task_id=None):
         # Limpiar todas las listas
         for task_list in self.task_lists.values():
             for child in task_list.get_children():
                 task_list.remove(child)
         
+        # Obtener el color del proyecto
+        project = self.data_manager.get_project(project_id)
+        project_color = project.get('color', 'rgb(245, 39, 39)')
+        
         # Añadir tareas a sus respectivas columnas
         for task in self.data_manager.get_tasks(project_id):
             row = Gtk.ListBoxRow()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             box.set_margin_start(12)
             box.set_margin_end(12)
             row.get_style_context().add_class('item')
             row.add(box)
+            
+            # Aplicar el color del proyecto como borde izquierdo
+            provider = Gtk.CssProvider()
+            provider.load_from_data(f'.item {{ border-left: 7px solid {project_color}; }}'.encode())
+            row.get_style_context().add_provider(
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
             
             # Contenedor para el contenido de la tarea
             content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -206,6 +220,26 @@ class Kanban(Gtk.Box):
                 title_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 content_box.pack_start(title_label, False, False, 0)
             
+            # Contenedor para las fechas
+            dates_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            dates_box.set_margin_top(6)
+            box.pack_start(dates_box, False, False, 0)
+            
+            # Fecha de creación
+            created_at = task.get('created_at', 'No disponible')
+            created_label = Gtk.Label(label=f"Creada: {created_at}")
+            created_label.set_xalign(0)
+            created_label.get_style_context().add_class('task-description')
+            dates_box.pack_start(created_label, False, False, 0)
+            
+            # Fecha de actualización si existe
+            updated_at = task.get('updated_at')
+            if updated_at:
+                updated_label = Gtk.Label(label=f"Actualizada: {updated_at}")
+                updated_label.set_xalign(0)
+                updated_label.get_style_context().add_class('task-description')
+                dates_box.pack_start(updated_label, False, False, 0)
+            
             row.task_id = task['id']
             
             # Asegurarse de que la tarea tenga un estado válido
@@ -218,8 +252,16 @@ class Kanban(Gtk.Box):
         # Mostrar todas las listas
         for task_list in self.task_lists.values():
             task_list.show_all()
-            
-        # Seleccionar la primera tarea por defecto
+        
+        # Seleccionar la tarea movida si corresponde
+        if selected_task_id is not None:
+            for task_list in self.task_lists.values():
+                for row in task_list.get_children():
+                    if hasattr(row, 'task_id') and row.task_id == selected_task_id:
+                        task_list.select_row(row)
+                        row.get_style_context().add_class('selected')
+                        return
+        # Si no, seleccionar la primera tarea por defecto
         for task_list in self.task_lists.values():
             if task_list.get_children():
                 first_row = task_list.get_row_at_index(0)

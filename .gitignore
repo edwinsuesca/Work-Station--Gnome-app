@@ -54,4 +54,9 @@ htmlcov/
 
 # Archivos de configuración local
 config.local.py
-settings.local.py 
+settings.local.py
+
+# Archivos y carpetas de build y distribución
+work-station_1.0/
+work-station_1.0.deb
+work-station.spec 
