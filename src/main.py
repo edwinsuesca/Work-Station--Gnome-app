@@ -102,6 +102,8 @@ class WorkStationApp(Gtk.Application):
         # Intentar cargar el último proyecto seleccionado
         if self.data_manager.get_projects():
             self.current_project = self.data_manager.get_projects()[0]
+            self.notes_view.set_current_project_id(self.current_project['id'])
+            self.kanban.set_current_project_id(self.current_project['id'])
             self.refresh_notes()
             self.refresh_tasks()
 
@@ -124,6 +126,8 @@ class WorkStationApp(Gtk.Application):
             
             project_id = self.data_manager.get_projects()[row.get_index()]['id']
             self.current_project = self.data_manager.get_project(project_id)
+            self.notes_view.set_current_project_id(project_id)
+            self.kanban.set_current_project_id(project_id)
             self.refresh_notes()
             self.refresh_tasks()
 

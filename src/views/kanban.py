@@ -1,6 +1,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Pango
+from gi.repository import Gtk, Pango, Gdk
+import json
 
 class Kanban(Gtk.Box):
     def __init__(self, data_manager, on_task_activated, on_add_task):
@@ -9,9 +10,9 @@ class Kanban(Gtk.Box):
         self.set_homogeneous(True)
         self.on_task_activated = on_task_activated
         self.on_add_task = on_add_task
-        
-        # Columnas del Kanban
+        self.current_project_id = None
         self.task_lists = {}
+        self.column_boxes = {}  # Para referencia a cada columna
         columns = ["Por Hacer", "En Progreso", "Completado"]
         
         for i, column in enumerate(columns):
@@ -47,6 +48,7 @@ class Kanban(Gtk.Box):
             
             # Lista de tareas
             task_list = Gtk.ListBox()
+            task_list.column_status = column  # Asignar el estado a la lista
             task_list.connect('row-activated', self.on_task_activated)
             task_list.set_margin_start(6)
             task_list.set_margin_end(6)
@@ -64,13 +66,20 @@ class Kanban(Gtk.Box):
             column_box.pack_start(add_task_btn, False, False, 0)
             
             self.pack_start(column_box, True, True, 0)
+            self.column_boxes[column] = column_box
         
         # Conectar el evento de clic derecho para todas las listas de tareas
         for task_list in self.task_lists.values():
             task_list.connect('button-press-event', self.on_button_press)
         
+        # Menú contextual de columna (área vacía)
+        for task_list in self.task_lists.values():
+            task_list.connect('button-press-event', self.on_column_context_menu, task_list.column_status)
         
         self.show_all()
+    
+    def set_current_project_id(self, project_id):
+        self.current_project_id = project_id
     
     def on_button_press(self, widget, event):
         if event.button == 3:  # Clic derecho
@@ -91,6 +100,11 @@ class Kanban(Gtk.Box):
                 
                 # Crear el menú contextual
                 menu = Gtk.Menu()
+                
+                # Opción copiar tarea
+                copy_item = Gtk.MenuItem(label="Copiar")
+                copy_item.connect('activate', self.on_copy_task, row)
+                menu.append(copy_item)
                 
                 # Submenú para cambiar estado
                 status_menu = Gtk.Menu()
@@ -122,6 +136,38 @@ class Kanban(Gtk.Box):
                 menu.append(delete_item)
                 
                 # Mostrar el menú
+                menu.show_all()
+                menu.popup(None, None, None, None, event.button, event.time)
+                return True
+        return False
+    
+    def on_column_context_menu(self, widget, event, column):
+        if event.button == 3:
+            row = widget.get_row_at_y(event.y)
+            if not row:
+                menu = Gtk.Menu()
+                # Opción crear tarea
+                new_task_item = Gtk.MenuItem(label="Crear Tarea")
+                def on_create_task(_item):
+                    # Simula el click en el botón de añadir tarea de la columna
+                    for child in self.column_boxes[column].get_children():
+                        if isinstance(child, Gtk.Button) and hasattr(child, 'column_status') and child.column_status == column:
+                            child.emit('clicked')
+                            break
+                new_task_item.connect('activate', on_create_task)
+                menu.append(new_task_item)
+                # Opción pegar tarea
+                clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+                text = clipboard.wait_for_text()
+                if text:
+                    try:
+                        data = json.loads(text)
+                        if isinstance(data, dict) and data.get('workstation_type') == 'work-station-task':
+                            paste_item = Gtk.MenuItem(label="Pegar Tarea")
+                            paste_item.connect('activate', self.on_paste_task, data, column)
+                            menu.append(paste_item)
+                    except Exception:
+                        pass
                 menu.show_all()
                 menu.popup(None, None, None, None, event.button, event.time)
                 return True
@@ -161,6 +207,37 @@ class Kanban(Gtk.Box):
                 self.data_manager.delete_task(task_id)
                 self.refresh_tasks(task['project_id'])
             
+            dialog.destroy()
+    
+    def on_copy_task(self, menu_item, row):
+        task_id = row.task_id
+        task = next((t for t in self.data_manager.get_tasks() if t['id'] == task_id), None)
+        if task:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            data = {
+                'workstation_type': 'work-station-task',
+                'title': task['title'],
+                'description': task['description'],
+                'id': task['id']
+            }
+            clipboard.set_text(json.dumps(data), -1)
+
+    def on_paste_task(self, menu_item, data, column):
+        title = data.get('title', '')
+        description = data.get('description', '')
+        if self.current_project_id:
+            self.data_manager.add_task(title, description, column, self.current_project_id)
+            self.refresh_tasks(self.current_project_id)
+        else:
+            parent = self.get_toplevel()
+            dialog = Gtk.MessageDialog(
+                transient_for=parent,
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK,
+                text="No hay proyecto seleccionado para pegar la tarea."
+            )
+            dialog.run()
             dialog.destroy()
     
     def refresh_tasks(self, project_id, selected_task_id=None):

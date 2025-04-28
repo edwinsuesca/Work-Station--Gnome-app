@@ -1,6 +1,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
+import sys
 
 class NotesView(Gtk.Box):
     def __init__(self, data_manager, on_note_activated, on_add_note):
@@ -8,6 +9,7 @@ class NotesView(Gtk.Box):
         self.data_manager = data_manager
         self.on_note_activated = on_note_activated
         self.on_add_note = on_add_note
+        self.current_project_id = None  # Nuevo atributo
         
         # Lista de notas
         self.notes_list = Gtk.ListBox()
@@ -27,6 +29,9 @@ class NotesView(Gtk.Box):
         
         self.show_all()
     
+    def set_current_project_id(self, project_id):
+        self.current_project_id = project_id
+    
     def on_button_press(self, widget, event):
         if event.button == 3:  # Clic derecho
             # Obtener la fila bajo el cursor
@@ -39,6 +44,11 @@ class NotesView(Gtk.Box):
                 # Seleccionar la fila
                 widget.select_row(row)
                 
+                # Opción de copiar
+                copy_item = Gtk.MenuItem(label="Copiar")
+                copy_item.connect('activate', self.on_copy_note, row)
+                menu.append(copy_item)
+                
                 # Opción de eliminar
                 delete_item = Gtk.MenuItem(label="Eliminar")
                 delete_item.connect('activate', self.on_delete_note, row)
@@ -48,6 +58,20 @@ class NotesView(Gtk.Box):
                 new_note_item = Gtk.MenuItem(label="Crear Nota")
                 new_note_item.connect('activate', self.on_add_note)
                 menu.append(new_note_item)
+                
+                # Opción de pegar (si hay una nota válida en el portapapeles)
+                clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+                text = clipboard.wait_for_text()
+                if text:
+                    import json
+                    try:
+                        data = json.loads(text)
+                        if isinstance(data, dict) and data.get('workstation_type') == 'work-station-note':
+                            paste_item = Gtk.MenuItem(label="Pegar Nota")
+                            paste_item.connect('activate', self.on_paste_note, data)
+                            menu.append(paste_item)
+                    except Exception:
+                        pass
             
             # Mostrar el menú
             menu.show_all()
@@ -83,6 +107,38 @@ class NotesView(Gtk.Box):
                 self.data_manager.delete_note(note_id)
                 self.refresh_notes(note['project_id'])
             
+            dialog.destroy()
+    
+    def on_copy_note(self, menu_item, row):
+        note_id = row.note_id
+        note = next((n for n in self.data_manager.get_notes() if n['id'] == note_id), None)
+        if note:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            import json
+            data = {
+                'workstation_type': 'work-station-note',
+                'title': note['title'],
+                'content': note['content'],
+                'id': note['id']
+            }
+            clipboard.set_text(json.dumps(data), -1)
+    
+    def on_paste_note(self, menu_item, data):
+        title = data.get('title', '')
+        content = data.get('content', '')
+        if self.current_project_id:
+            self.data_manager.add_note(title, content, self.current_project_id)
+            self.refresh_notes(self.current_project_id)
+        else:
+            parent = self.get_toplevel()
+            dialog = Gtk.MessageDialog(
+                transient_for=parent,
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.OK,
+                text="No hay proyecto seleccionado para pegar la nota."
+            )
+            dialog.run()
             dialog.destroy()
     
     def refresh_notes(self, project_id):
