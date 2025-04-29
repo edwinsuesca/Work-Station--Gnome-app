@@ -1,13 +1,16 @@
 import json
 import os
+import shutil
 from pathlib import Path
 import sqlite3
 from datetime import datetime
+import uuid
 
 class DataManager:
     def __init__(self):
         self.data_dir = Path.home() / '.workstation'
         self.data_file = self.data_dir / 'work-station-data.json'
+        self.images_dir = self.data_dir / 'images'
         self.data = {
             'projects': [],
             'notes': [],
@@ -19,6 +22,7 @@ class DataManager:
     def _ensure_data_dir(self):
         """Asegura que el directorio de datos existe"""
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.images_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_data(self):
         """Carga los datos desde el archivo JSON"""
@@ -69,7 +73,7 @@ class DataManager:
                 return project
         return None
 
-    def add_note(self, title, content, project_id):
+    def add_note(self, title, content, project_id, images=None):
         """Añade una nueva nota"""
         if not project_id:
             raise ValueError("Se requiere un project_id para crear una nota")
@@ -79,6 +83,7 @@ class DataManager:
             'title': title,
             'content': content,
             'project_id': project_id,
+            'images': images or [],
             'created_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
             'updated_at': None
         }
@@ -86,18 +91,20 @@ class DataManager:
         self._save_data()
         return note
 
-    def update_note(self, note_id, title, content):
+    def update_note(self, note_id, title, content, images=None):
         """Actualiza una nota existente"""
         for note in self.data['notes']:
             if note['id'] == note_id:
                 note['title'] = title
                 note['content'] = content
+                if images is not None:
+                    note['images'] = images
                 note['updated_at'] = datetime.now().strftime('%d/%m/%Y %H:%M')
                 self._save_data()
                 return note
         return None
 
-    def add_task(self, title, description="", status="Por Hacer", project_id=None):
+    def add_task(self, title, description="", status="Por Hacer", project_id=None, images=None):
         """Añade una nueva tarea"""
         if not project_id:
             raise ValueError("Se requiere un project_id para crear una tarea")
@@ -108,6 +115,7 @@ class DataManager:
             'description': description,
             'status': status,
             'project_id': project_id,
+            'images': images or [],
             'created_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
             'updated_at': None
         }
@@ -157,12 +165,14 @@ class DataManager:
         self.data['tasks'] = [task for task in self.data['tasks'] if task['id'] != task_id]
         self._save_data()
 
-    def update_task(self, task_id, title, description):
+    def update_task(self, task_id, title, description, images=None):
         """Actualiza una tarea existente."""
         for task in self.data['tasks']:
             if task['id'] == task_id:
                 task['title'] = title
                 task['description'] = description
+                if images is not None:
+                    task['images'] = images
                 task['updated_at'] = datetime.now().strftime('%d/%m/%Y %H:%M')
                 self._save_data()
                 return True
@@ -196,3 +206,29 @@ class DataManager:
         self.data['tasks'] = [t for t in self.data['tasks'] if t['project_id'] != project_id]
         
         self._save_data() 
+
+    def save_image(self, image_path):
+        """Guarda una imagen en el directorio de imágenes y devuelve su nombre único"""
+        if not os.path.exists(image_path):
+            raise ValueError("La ruta de la imagen no existe")
+        
+        # Generar un nombre único para la imagen
+        unique_name = f"{uuid.uuid4()}{Path(image_path).suffix}"
+        target_path = self.images_dir / unique_name
+        
+        # Copiar la imagen al directorio de imágenes
+        shutil.copy2(image_path, target_path)
+        
+        return unique_name
+
+    def delete_image(self, image_name):
+        """Elimina una imagen del directorio de imágenes"""
+        image_path = self.images_dir / image_name
+        if image_path.exists():
+            image_path.unlink()
+            return True
+        return False
+
+    def get_image_path(self, image_name):
+        """Obtiene la ruta completa de una imagen"""
+        return str(self.images_dir / image_name) 

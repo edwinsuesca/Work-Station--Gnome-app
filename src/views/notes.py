@@ -2,6 +2,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 import sys
+from utils.image_preview import ImagePreviewGrid
 
 class NotesView(Gtk.Box):
     def __init__(self, data_manager, on_note_activated, on_add_note):
@@ -175,6 +176,13 @@ class NotesView(Gtk.Box):
                 content_label = Gtk.Label(label=note['content'])
                 content_label.set_xalign(0)
                 box.pack_start(content_label, False, False, 0)
+            
+            # Añadir rejilla de previsualizaciones si hay imágenes
+            if note.get('images'):
+                preview_grid = ImagePreviewGrid(self.data_manager)
+                for image in note['images']:
+                    preview_grid.add_image(image)
+                box.pack_start(preview_grid, False, False, 0)
             
             # Contenedor para las fechas
             dates_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)

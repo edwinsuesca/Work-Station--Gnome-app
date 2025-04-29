@@ -156,13 +156,13 @@ class WorkStationApp(Gtk.Application):
             row.get_style_context().add_class('selected')
 
             if note:
-                dialog = NoteDialog(self.win, note)
+                dialog = NoteDialog(self, note)
                 response = dialog.run()
                 
                 if response == Gtk.ResponseType.OK:
-                    title, content = dialog.get_note_data()
+                    title, content, images = dialog.get_note_data()
                     if title:
-                        self.data_manager.update_note(note_id, title, content)
+                        self.data_manager.update_note(note_id, title, content, images)
                         self.refresh_notes()
                 
                 dialog.destroy()
@@ -182,13 +182,13 @@ class WorkStationApp(Gtk.Application):
             row.get_style_context().add_class('selected')
 
             if task:
-                dialog = TaskDialog(self.win, task)
+                dialog = TaskDialog(self, task)
                 response = dialog.run()
                 
                 if response == Gtk.ResponseType.OK:
-                    title, description = dialog.get_task_data()
+                    title, description, images = dialog.get_task_data()
                     if title:
-                        self.data_manager.update_task(task_id, title, description)
+                        self.data_manager.update_task(task_id, title, description, images)
                         self.refresh_tasks()
                 
                 dialog.destroy()
@@ -218,13 +218,13 @@ class WorkStationApp(Gtk.Application):
             dialog.destroy()
             return
 
-        dialog = NoteDialog(self.win)
+        dialog = NoteDialog(self)
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            title, content = dialog.get_note_data()
+            title, content, images = dialog.get_note_data()
             if title:
-                self.data_manager.add_note(title, content, self.current_project['id'])
+                self.data_manager.add_note(title, content, self.current_project['id'], images)
                 self.refresh_notes()
         
         dialog.destroy()
@@ -245,13 +245,13 @@ class WorkStationApp(Gtk.Application):
         # Obtener el estado directamente del botón
         status = button.column_status
 
-        dialog = TaskDialog(self.win)
+        dialog = TaskDialog(self)
         response = dialog.run()
         
         if response == Gtk.ResponseType.OK:
-            title, description = dialog.get_task_data()
+            title, description, images = dialog.get_task_data()
             if title:
-                self.data_manager.add_task(title, description, status, self.current_project['id'])
+                self.data_manager.add_task(title, description, status, self.current_project['id'], images)
                 self.refresh_tasks()
         
         dialog.destroy()

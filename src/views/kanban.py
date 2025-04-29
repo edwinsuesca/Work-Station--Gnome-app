@@ -2,6 +2,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Pango, Gdk
 import json
+from utils.image_preview import ImagePreviewGrid
 
 class Kanban(Gtk.Box):
     def __init__(self, data_manager, on_task_activated, on_add_task):
@@ -292,6 +293,13 @@ class Kanban(Gtk.Box):
                 title_label.set_line_wrap(True)
                 title_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 content_box.pack_start(title_label, False, False, 0)
+            
+            # Añadir rejilla de previsualizaciones si hay imágenes
+            if task.get('images'):
+                preview_grid = ImagePreviewGrid(self.data_manager)
+                for image in task['images']:
+                    preview_grid.add_image(image)
+                content_box.pack_start(preview_grid, False, False, 0)
             
             # Contenedor para las fechas
             dates_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)

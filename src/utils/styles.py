@@ -148,6 +148,37 @@ def load_styles():
         min-width: 0;
         min-height: 0;
     }
+
+    /* Estilos para las imágenes */
+    .image-container {
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        margin: 2px;
+    }
+    
+    .image-container:hover {
+        border: 1px solid #bdbdbd;
+    }
+    
+    .image-delete-button {
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        padding: 2px;
+        min-width: 24px;
+        min-height: 24px;
+        opacity: 0.8;
+    }
+    
+    .image-delete-button:hover {
+        background-color: rgba(255, 255, 255, 1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .image-preview-container {
+        border-radius: 4px;
+        padding: 4px;
+    }
     """
     css_provider = Gtk.CssProvider()
     css_provider.load_from_data(css.encode())
