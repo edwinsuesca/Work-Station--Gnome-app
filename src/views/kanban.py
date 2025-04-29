@@ -8,6 +8,7 @@ class Kanban(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.data_manager = data_manager
         self.set_homogeneous(True)
+        self.get_style_context().add_class('kanban-container')
         self.on_task_activated = on_task_activated
         self.on_add_task = on_add_task
         self.current_project_id = None
@@ -25,10 +26,7 @@ class Kanban(Gtk.Box):
             
             # Header de la columna
             header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-            header_box.set_margin_start(6)
-            header_box.set_margin_end(6)
             header_box.set_margin_top(6)
-            header_box.set_margin_bottom(6)
             
             # Título de la columna
             title_label = Gtk.Label(label=column)
@@ -50,9 +48,7 @@ class Kanban(Gtk.Box):
             task_list = Gtk.ListBox()
             task_list.column_status = column  # Asignar el estado a la lista
             task_list.connect('row-activated', self.on_task_activated)
-            task_list.set_margin_start(6)
-            task_list.set_margin_end(6)
-            task_list.set_margin_bottom(6)
+
             self.task_lists[column] = task_list
             column_box.pack_start(task_list, True, True, 0)
             

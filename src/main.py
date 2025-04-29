@@ -30,6 +30,10 @@ class WorkStationApp(Gtk.Application):
         
         # Crear el layout principal con paned
         self.main_paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        self.main_paned.set_margin_start(0)
+        self.main_paned.set_margin_end(0)
+        self.main_paned.set_margin_top(0)
+        self.main_paned.set_margin_bottom(0)
         self.win.add(self.main_paned)
         
         # Crear la sidebar
@@ -38,6 +42,8 @@ class WorkStationApp(Gtk.Application):
             self.on_project_selected,
             self.on_add_project
         )
+        self.sidebar.set_margin_end(0)
+        
         self.main_paned.pack1(self.sidebar, False, False)
         
         # Crear el contenido principal
@@ -58,16 +64,17 @@ class WorkStationApp(Gtk.Application):
         
         # Notebook para las diferentes secciones
         self.notebook = Gtk.Notebook()
-        self.notebook.set_margin_start(6)
-        self.notebook.set_margin_end(6)
-        self.notebook.set_margin_bottom(6)
-        
+        self.notebook.get_style_context().add_class('kanban-container')
+        self.notebook.get_style_context().add_class('notebook')
+        self.notebook.set_show_border(False)
+        self.notebook.set_margin_start(0)
+
         # Añadir las pestañas principales
         self.setup_tasks_tab()
         self.setup_notes_tab()
         
         # Crear un contenedor intermedio para el notebook
-        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         container.pack_start(self.notebook, True, True, 0)
         
         # Agregar el contenedor al ScrolledWindow
@@ -75,6 +82,7 @@ class WorkStationApp(Gtk.Application):
         
         # Añadir el ScrolledWindow al main_box
         self.main_box.pack_start(scrolled_window, True, True, 0)
+        self.main_box.get_style_context().add_class('p-container')
         
         # Añadir el contenido principal al paned
         self.main_paned.pack2(self.main_box, True, True)
@@ -85,6 +93,9 @@ class WorkStationApp(Gtk.Application):
             self.on_task_activated,
             self.on_add_task
         )
+
+        self.kanban.get_style_context().add_class('kanban-container')
+        self.kanban.set_border_width(0)
         self.notebook.append_page(self.kanban, Gtk.Label(label="Tareas"))
 
     def setup_notes_tab(self):
@@ -93,6 +104,7 @@ class WorkStationApp(Gtk.Application):
             self.on_note_activated,
             self.on_add_note
         )
+        self.notes_view.get_style_context().add_class('kanban-container')
         self.notebook.append_page(self.notes_view, Gtk.Label(label="Notas"))
 
     def load_last_project(self):

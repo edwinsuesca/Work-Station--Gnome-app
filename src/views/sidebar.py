@@ -7,8 +7,9 @@ from dialogs.dialogs import ProjectDialog
 
 class Sidebar(Gtk.Box):
     def __init__(self, data_manager, on_project_selected, on_add_project):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.set_size_request(220, -1)
+        self.get_style_context().add_class('sidebar')
         self.data_manager = data_manager
         self.on_project_selected = on_project_selected
         self.on_add_project = on_add_project
@@ -51,7 +52,7 @@ class Sidebar(Gtk.Box):
         # Título de la sidebar
         title_label = Gtk.Label(label='Proyectos')
         title_label.set_margin_top(3)
-        title_label.set_margin_bottom(3)
+        title_label.set_margin_bottom(6)
         title_label.set_margin_start(6)
         title_label.set_margin_end(6)
         

@@ -7,7 +7,7 @@ from datetime import datetime
 class DataManager:
     def __init__(self):
         self.data_dir = Path.home() / '.workstation'
-        self.data_file = self.data_dir / 'data.json'
+        self.data_file = self.data_dir / 'work-station-data.json'
         self.data = {
             'projects': [],
             'notes': [],
@@ -79,7 +79,7 @@ class DataManager:
             'title': title,
             'content': content,
             'project_id': project_id,
-            'created_at': datetime.now().strftime('%d/%m/%Y'),
+            'created_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
             'updated_at': None
         }
         self.data['notes'].append(note)
@@ -92,7 +92,7 @@ class DataManager:
             if note['id'] == note_id:
                 note['title'] = title
                 note['content'] = content
-                note['updated_at'] = datetime.now().strftime('%d/%m/%Y')
+                note['updated_at'] = datetime.now().strftime('%d/%m/%Y %H:%M')
                 self._save_data()
                 return note
         return None
@@ -108,7 +108,7 @@ class DataManager:
             'description': description,
             'status': status,
             'project_id': project_id,
-            'created_at': datetime.now().strftime('%d/%m/%Y'),
+            'created_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
             'updated_at': None
         }
         self.data['tasks'].append(task)
@@ -163,7 +163,7 @@ class DataManager:
             if task['id'] == task_id:
                 task['title'] = title
                 task['description'] = description
-                task['updated_at'] = datetime.now().strftime('%d/%m/%Y')
+                task['updated_at'] = datetime.now().strftime('%d/%m/%Y %H:%M')
                 self._save_data()
                 return True
         return False

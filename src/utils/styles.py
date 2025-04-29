@@ -8,16 +8,16 @@ def load_styles():
     .item {
         padding: 5px 0;
         border: none;
-        border-bottom: 1px solid rgba(141, 141, 141, 0.2);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .item-project {
         padding: 10px 0;
         border: none;
-        border-bottom: 1px solid rgba(141, 141, 141, 0.2);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }
     .selected {
-        background-color: rgba(0, 142, 255, 0.2);
+        background-color: rgba(0, 142, 255, 0.1);
         border-bottom-color: rgba(0, 142, 255, 0.7);
         color: @theme_fg_color;
     }
@@ -70,8 +70,12 @@ def load_styles():
         border: none;
     }
 
+    .p-container {
+        border: none;
+    }
+    
     .kanban-column {
-        border-right: 1px solid rgba(141, 141, 141, 0.2);
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .kanban-column:last-child {
@@ -99,6 +103,50 @@ def load_styles():
     .selected-color {
         border: 2px solid @theme_fg_color;
         border-width: 3px;
+    }
+
+    /* Eliminar bordes del notebook y tabs */
+    notebook {
+        border: none;
+        background: none;
+        padding: 0;
+    }
+    
+    notebook header {
+        border: none;
+        background: none;
+        padding: 0;
+    }
+    
+    notebook header tabs {
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    notebook header tab {
+        margin: 0;
+        padding: 8px 12px;
+    }
+
+    /* Eliminar bordes de la sidebar */
+    .sidebar {
+        padding: 0;
+        margin: 0;
+        background: none;
+        border: none;
+    }
+
+    /* Eliminar el borde del separador del paned */
+    paned {
+        background: none;
+    }
+
+    paned separator {
+        background: none;
+        border: none;
+        min-width: 0;
+        min-height: 0;
     }
     """
     css_provider = Gtk.CssProvider()
